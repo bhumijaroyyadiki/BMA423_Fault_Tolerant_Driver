@@ -1,0 +1,13 @@
+{
+	"folders": [
+		{
+			"path": ".."
+		}
+	],
+	"settings": {
+		"files.associations": {
+			"wifi_app.h": "c",
+			"esp_log.h": "c"
+		}
+	}
+}
