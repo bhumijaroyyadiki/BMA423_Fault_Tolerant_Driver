@@ -4,6 +4,7 @@
 #include "i2c.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "bma423_platform.h"
 
 bma423_status_t bma423_init(void)
 {
@@ -19,11 +20,11 @@ bma423_status_t bma423_init(void)
     {
         return BMA423_ERR_BUS;
     }
-    printf("[DEBUG] Soft reset sent\n");
+    //printf("[DEBUG] Soft reset sent\n");
+    
     /* Step 2: Wait for device reboot */
-
-    vTaskDelay(pdMS_TO_TICKS(1));
-    printf("[DEBUG] Starting chip ID read\n");
+    vTaskDelay(pdMS_TO_TICKS(50));
+    //printf("[DEBUG] Starting chip ID read\n");
 
     //Dummy Read to clear reset state and start internal processes
     /* Dummy read required after soft reset */
@@ -109,7 +110,7 @@ bma423_status_t bma423_init(void)
         printf("[ACC_CONF] Verification failed\n");
         return BMA423_ERR_CONFIG;
     }
-    esp_rom_delay_us(1000);  // BMA423 datasheet: min 1000µs inter-write delay
+    BMA423_DELAY_US(1000);  // BMA423 datasheet: min 1000µs inter-write delay
     // Step 7: Configure ACC_RANGE
     uint8_t acc_range = ACC_RANGE_4G; // ±4g
     if (i2c_write(BMA423_ADDR,
@@ -133,7 +134,7 @@ bma423_status_t bma423_init(void)
         printf("[ACC_RANGE] Verification failed\n");
         return BMA423_ERR_CONFIG;
     }
-    esp_rom_delay_us(1000);  // BMA423 datasheet: min 1000µs inter-write delay
+    BMA423_DELAY_US(1000);  // BMA423 datasheet: min 1000µs inter-write delay
     // Step 8: Configure INT1_IO_CTRL
     uint8_t int1_io_ctrl  =
     (INT1_INPUT_DIS   << INT1_IO_CTRL_INPUT_EN_POS)  |
@@ -166,7 +167,7 @@ bma423_status_t bma423_init(void)
         printf("[INT1_IO_CTRL] Verification failed\n");
         return BMA423_ERR_CONFIG;
     }
-    esp_rom_delay_us(1000);  // BMA423 datasheet: min 1000µs inter-write delay
+    BMA423_DELAY_US(1000);  // BMA423 datasheet: min 1000µs inter-write delay
     // Step 9: Configure INT_MAP
 
     uint8_t int_map =
@@ -197,8 +198,89 @@ bma423_status_t bma423_init(void)
     }
 
     printf("[INT_MAP] = 0x%02X\n", int_map_readback);
-    // Step 10: Verify configuration (read back at least one register)
-    /* Configuration already verified through per-register readback checks */
+
+    uint8_t pwr_conf = 0x00; // disable advanced power save
+    i2c_write(BMA423_ADDR, BMA423_PWR_CONF_REG, &pwr_conf, 1);
+    BMA423_DELAY_US(1000);
+    // Step 10: Enable accelerometer
+    // Reset default is 0x00 — accelerometer disabled
+    // Must explicitly enable before data reads will work
+    uint8_t pwr_ctrl = (PWR_CTRL_ACC_EN << PWR_CTRL_ACC_EN_POS);
+
+    if (i2c_write(BMA423_ADDR,
+                BMA423_PWR_CTRL_REG,
+                &pwr_ctrl,
+                1) != I2C_OK)
+    {
+        return BMA423_ERR_BUS;
+    }
+
+    BMA423_DELAY_US(1000); // inter-write delay
+
+    // Verify
+    uint8_t pwr_ctrl_readback = 0;
+    if (i2c_read(BMA423_ADDR,
+                BMA423_PWR_CTRL_REG,
+                &pwr_ctrl_readback,
+                1) != I2C_OK)
+    {
+        return BMA423_ERR_BUS;
+    }
+
+    if (pwr_ctrl_readback != pwr_ctrl)
+    {
+        printf("[PWR_CTRL] Verification failed\n");
+        return BMA423_ERR_CONFIG;
+    }
+
+    printf("[PWR_CTRL] Accelerometer enabled\n");
+
+    return BMA423_OK;
+}
+// Correct 12-bit construction
+
+
+bma423_status_t bma423_read_accel(int16_t *x, int16_t *y, int16_t *z)
+{   
+     
+    uint8_t buf[6];
+
+    if (x == NULL || y == NULL || z == NULL)
+    {
+        return BMA423_ERR_INVALID_ARG;
+    }
+
+    /*
+     * Hardware Settling Delay:
+     * The edge-triggered interrupt can arrive slightly before the internal 
+     * sensor data registers are completely populated. A fast 100µs busy-wait 
+     * ensures the internal ADC transfer is complete without making extra, 
+     * slow I2C status polling transactions.
+     */
+    BMA423_DELAY_US(100);
+
+    // Step 1: Burst read 6 bytes starting from ACC_X_LSB
+    i2c_status_t i2c_result = i2c_read(BMA423_ADDR, 
+                                       BMA423_ACC_X_LSB_REG, 
+                                       buf, 
+                                       6);
+    
+    // TEMPORARY LOGGING ATTACHMENT
+    if (i2c_result != I2C_OK) 
+    {
+        printf("[DEBUG] i2c_read failed inside bma423_read_accel: %d\n", i2c_result);
+        return BMA423_ERR_BUS;
+    }
+
+    // Step 2: Reconstruct 12-bit values from LSB/MSB pairs
+    uint16_t raw_x = ((uint16_t)buf[1] << 4) | (buf[0] >> 4);
+    uint16_t raw_y = ((uint16_t)buf[3] << 4) | (buf[2] >> 4);
+    uint16_t raw_z = ((uint16_t)buf[5] << 4) | (buf[4] >> 4);
+
+    // Step 3: Sign extension from 12-bit signed to 16-bit signed variables
+    *x = ((int16_t)(raw_x << 4)) >> 4;
+    *y = ((int16_t)(raw_y << 4)) >> 4;
+    *z = ((int16_t)(raw_z << 4)) >> 4;
 
     return BMA423_OK;
 }

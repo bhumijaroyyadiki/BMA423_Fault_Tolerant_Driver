@@ -1,3 +1,6 @@
+#ifndef BMA423_REGS_H
+#define BMA423_REGS_H
+
 #define BMA423_ADDR               0x19
 #define BMA423_CHIP_ID_REG        0x00
 #define BMA423_DATA_X_LSB_REG     0x0A
@@ -6,41 +9,14 @@
 #define BMA423_ACC_CONF_REG       0x40
 #define BMA423_ACC_RANGE_REG      0x41
 #define BMA423_PWR_CTRL_REG       0x7D
+#define BMA423_PWR_CONF_REG       0x7C
 #define BMA423_INT_MAP_DATA_REG   0x58
 #define BMA423_INT1_IO_CTRL_REG   0x53
 #define BMA423_INT_STATUS_1_REG   0x1D
 #define BMA423_EXPECTED_CHIP_ID   0x13
 #define BMA423_ERR_REG            0x02
 #define BMA423_INT_MAP_REG        0x58
-
-// BMA423_INT1_IO_CTRL_REG bit definitions
-// input_en (bit 4)
-#define INT1_INPUT_DIS             0x00   // input_en = 0 -> Input disabled
-#define INT1_INPUT_EN              0x01   // input_en = 1 -> Input enabled
-// output_en (bit 3)
-#define INT1_OUTPUT_DIS            0x00   // output_en = 0 -> Output disabled
-#define INT1_OUTPUT_EN             0x01   // output_en = 1 -> Output enabled
-// od (bit 2)
-#define INT1_PUSH_PULL             0x00   // od = 0 -> push_pull
-#define INT1_OPEN_DRAIN            0x01   // od = 1 -> open_drain
-// lvl (bit 1)
-#define INT1_ACTIVE_LOW            0x00   // lvl = 0 -> active_low
-#define INT1_ACTIVE_HIGH           0x01   // lvl = 1 -> active_high
-// edge_ctrl (bit 0)
-#define INT1_LEVEL_TR              0x00   // edge_ctrl = 0 -> level_tr
-#define INT1_EDGE_TR               0x01   // edge_ctrl = 1 -> edge_tr
-// Bit Positions
-#define INT1_IO_CTRL_INPUT_EN_POS   4
-#define INT1_IO_CTRL_OUTPUT_EN_POS  3
-#define INT1_IO_CTRL_OD_POS         2
-#define INT1_IO_CTRL_LVL_POS        1
-#define INT1_IO_CTRL_EDGE_CTRL_POS  0
-// Bit Masks
-#define INT1_IO_CTRL_INPUT_EN_MASK  (0x01 << INT1_IO_CTRL_INPUT_EN_POS)
-#define INT1_IO_CTRL_OUTPUT_EN_MASK (0x01 << INT1_IO_CTRL_OUTPUT_EN_POS)
-#define INT1_IO_CTRL_OD_MASK        (0x01 << INT1_IO_CTRL_OD_POS)
-#define INT1_IO_CTRL_LVL_MASK       (0x01 << INT1_IO_CTRL_LVL_POS)
-#define INT1_IO_CTRL_EDGE_CTRL_MASK (0x01 << INT1_IO_CTRL_EDGE_CTRL_POS)
+#define BMA423_STATUS_REG         0x03
 
 //ACC_CONF register bit definitions
 // perf_mode (bit 7)
@@ -49,6 +25,7 @@
 #define ACC_BWP_AVG_4          0x02   // bwp = 0x02 → avg 4 samples (with perf_mode=0)
 // acc_odr (bits 3:0)
 #define ACC_ODR_25HZ           0x06   // odr = 0x06 → 25 Hz
+#define ACC_ODR_50HZ           0x07   // odr = 0x07 → 50 Hz
 #define ACC_CONF_PERF_MODE_POS   7
 #define ACC_CONF_PERF_MODE_MASK  (0x01 << ACC_CONF_PERF_MODE_POS)
 #define ACC_CONF_BWP_POS         4
@@ -146,3 +123,48 @@
 
 #define ERR_CODE_NO_ERROR          0x00
 #define ERR_CODE_ACC_ERR           0x01
+
+//PWR_CTRL register bit definitions
+#define BMA423_PWR_CTRL_REG     0x7D
+#define PWR_CTRL_ACC_EN_POS     2
+#define PWR_CTRL_ACC_EN_MASK    (0x01 << PWR_CTRL_ACC_EN_POS)
+#define PWR_CTRL_ACC_EN         0x01
+
+//Status Register bit definitions
+// drdy_acc (bit 7)
+#define STATUS_DRDY_ACC_NOT_READY  0x00   // Data not ready for accelerometer
+#define STATUS_DRDY_ACC_READY      0x01   // Data ready for accelerometer (resets on read)
+
+// drdy_aux (bit 5)
+#define STATUS_DRDY_AUX_NOT_READY  0x00   // Data not ready for auxiliary sensor
+#define STATUS_DRDY_AUX_READY      0x01   // Data ready for auxiliary sensor (resets on read)
+
+// cmd_rdy (bit 4)
+#define STATUS_CMD_IN_PROGRESS     0x00   // Command in progress
+#define STATUS_CMD_READY           0x01   // Command decoder is ready to accept a new command
+
+// aux_man_op (bit 2)
+#define STATUS_AUX_MAN_OP_IDLE     0x00   // No manual auxiliary interface operation is ongoing
+#define STATUS_AUX_MAN_OP_ONGOING  0x01   // Manual auxiliary interface operation is ongoing
+
+// Bit Positions
+#define STATUS_DRDY_ACC_POS        7
+#define STATUS_DRDY_AUX_POS        5
+#define STATUS_CMD_RDY_POS         4
+#define STATUS_AUX_MAN_OP_POS      2
+
+// Bit Masks
+#define STATUS_DRDY_ACC_MASK       (0x01 << STATUS_DRDY_ACC_POS)
+#define STATUS_DRDY_AUX_MASK       (0x01 << STATUS_DRDY_AUX_POS)
+#define STATUS_CMD_RDY_MASK        (0x01 << STATUS_CMD_RDY_POS)
+#define STATUS_AUX_MAN_OP_MASK     (0x01 << STATUS_AUX_MAN_OP_POS)
+
+//Axes data registers
+#define BMA423_ACC_X_LSB_REG        0x12
+#define BMA423_ACC_X_MSB_REG        0x13
+#define BMA423_ACC_Y_LSB_REG        0x14
+#define BMA423_ACC_Y_MSB_REG        0x15
+#define BMA423_ACC_Z_LSB_REG        0x16
+#define BMA423_ACC_Z_MSB_REG        0x17
+
+#endif // BMA423_REGS_H
