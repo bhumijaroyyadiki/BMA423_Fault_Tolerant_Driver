@@ -8,11 +8,12 @@ Most sensor driver code assumes the bus and the sensor will always behave. Real 
 
 ## What it does
 
+- **Portable sensor logic** — the BMA423 register-level driver (bma423.c) has zero dependency on ESP-IDF types or calls; it only calls through the I2C transport interface (i2c_read/i2c_write) and a platform delay macro. Porting to a different MCU means rewriting the transport layer (i2c.c) and the interrupt/task setup (bma423_isr.c) — the sensor protocol and recovery logic itself is unchanged.
 - **Fully event-driven acquisition** — zero polling. A GPIO interrupt on the sensor's data-ready line wakes a FreeRTOS task; the ISR itself does no I2C work.
 - **Write-verified configuration** — every register write is read back and checked. An I2C ACK only confirms the byte was accepted on the wire, not that the device's internal register logic applied it.
 - **Three-tier bounded fault recovery** — retry → sensor re-initialization → controlled shutdown. No unbounded retries, no silent failures.
 - **No vendor sensor SDK** — every register, bit field, and timing constraint is implemented directly against the Bosch datasheet. The I2C transport layer uses ESP-IDF's driver API; the sensor protocol layer does not.
-- **Portable sensor logic** — the BMA423 register-level driver (bma423.c) has zero dependency on ESP-IDF types or calls; it only calls through the I2C transport interface (i2c_read/i2c_write) and a platform delay macro. Porting to a different MCU means rewriting the transport layer (i2c.c) and the interrupt/task setup (bma423_isr.c) — the sensor protocol and recovery logic itself is unchanged.
+
 
 ## Hardware
 
